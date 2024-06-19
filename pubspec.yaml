@@ -15,11 +15,15 @@ dependencies:
   collection: ^1.17.0
   golden_toolkit: ^0.15.0
   uuid: ^3.0.7
+  flutter_bloc: any
+  equatable: any
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^3.0.0
+  build_runner: ^2.1.7
+  copy_with_extension_gen: ^4.0.0
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
