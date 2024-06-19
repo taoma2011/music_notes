@@ -4,8 +4,8 @@ version: 0.0.1
 homepage:
 
 environment:
-  sdk: '>=3.3.3 <4.0.0'
-  flutter: '>=3.3.0'
+  sdk: ">=3.3.3 <4.0.0"
+  flutter: ">=3.3.0"
 
 dependencies:
   flutter:
@@ -15,8 +15,9 @@ dependencies:
   collection: ^1.17.0
   golden_toolkit: ^0.15.0
   uuid: ^3.0.7
-  flutter_bloc: any
+  flutter_bloc: ^8.1.6
   equatable: any
+  copy_with_extension: ^4.0.0
 
 dev_dependencies:
   flutter_test:

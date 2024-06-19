@@ -1,7 +1,31 @@
 import 'dart:ui';
-import '../graphics/notes.dart';
-
+import 'package:equatable/equatable.dart';
+import 'package:music_notes/graphics/music-line.dart';
+import 'package:music_notes/graphics/notes.dart';
 import '../graphics/render-functions/staff.dart';
+
+class MidiInstrument {
+  final int program;
+  final int channel;
+  final double volume;
+  const MidiInstrument(
+      {this.program = 1, this.channel = 1, this.volume = 100.0});
+}
+
+// the part description from music xml
+class ScorePart {
+  String partId;
+  String name;
+  String abbrev;
+  String instName; // instrument name, from "score-instrument" tag
+  MidiInstrument instrument;
+  ScorePart(
+      {required this.partId,
+      this.name = "",
+      this.abbrev = "",
+      this.instName = "",
+      this.instrument = const MidiInstrument()});
+}
 
 class Score {
   Score(this.parts);
@@ -10,9 +34,83 @@ class Score {
 }
 
 class Part {
-  Part(this.measures);
+  ScorePart? info;
+  String id;
+  Part(this.id, this.measures);
   final List<Measure> measures;
   get isEmpty => measures.isEmpty;
+}
+
+class TieContext {
+  PitchNote note;
+  double x;
+  double y;
+  TieContext({required this.note, required this.x, required this.y});
+}
+
+// a context for a list of measures, for example, the current attribute
+// this replace some functionality of DrawingContext, because its useful
+// in part other than drawing
+class MeasureContext {
+  Attributes? currentAttributes;
+  bool isFirstBar = false;
+  // pending ties
+  List<TieContext> openTies = [];
+  int tempo = 0;
+
+  void mergeAttributes(Attributes? a) {
+    if (currentAttributes == null) {
+      currentAttributes = a;
+    } else if (a != null) {
+      List<Clef>? newClefs = [];
+      if (a.clefs != null) {
+        Map<int, Clef> mergedClefs = {};
+
+        for (var c in currentAttributes!.clefs!) {
+          mergedClefs[c.staffNumber] = c;
+        }
+
+        for (var c in a.clefs!) {
+          mergedClefs[c.staffNumber] = c;
+        }
+
+        for (var c in mergedClefs.values) {
+          newClefs.add(c);
+        }
+      } else {
+        newClefs = currentAttributes!.clefs;
+      }
+
+      currentAttributes = Attributes(
+          clefs: newClefs,
+          divisions: a.divisions ?? currentAttributes!.divisions,
+          key: a.key ?? currentAttributes!.key,
+          staves: a.staves ?? currentAttributes!.staves,
+          time: a.time ?? currentAttributes!.time);
+    }
+  }
+
+  void mergeMeasureAttributes(Measure m) {
+    m.contents.forEach((e) {
+      if (e is Attributes) {
+        mergeAttributes(e);
+      }
+    });
+  }
+
+  void startTie(PitchNote note, double x, double y) {
+    // should check if open ties has the same note
+    openTies.add(TieContext(note: note, x: x, y: y));
+  }
+
+  TieContext? stopTie(PitchNote note) {
+    try {
+      var ret = openTies.firstWhere((t) => (t.note.pitch == note.pitch));
+      openTies.removeWhere((t) => (t.note.pitch == note.pitch));
+      return ret;
+    } catch (e) {}
+    return null;
+  }
 }
 
 class Measure {
@@ -21,10 +119,6 @@ class Measure {
   Attributes? get attributes {
     final attributes = contents.whereType<Attributes>();
     return attributes.isNotEmpty ? attributes.first : null;
-  }
-  Barline get barline {
-    final barline = contents.whereType<Barline>();
-    return barline.isNotEmpty ? barline.first : Barline(BarLineTypes.regular);
   }
 }
 
@@ -36,10 +130,11 @@ class Barline extends MeasureContent {
 }
 
 class Direction extends MeasureContent {
-  Direction(this.type, this.staff, [this.placement]);
+  Direction(this.type, this.staff, {this.placement, this.tempo = 0});
   final DirectionType type;
   final int staff;
   final PlacementValue? placement;
+  final int tempo;
 }
 
 class DirectionType {}
@@ -81,17 +176,24 @@ enum Accidentals { none, natural, sharp, flat }
 enum NoteLength { whole, half, quarter, eighth, sixteenth, thirtysecond }
 
 class Attributes extends MeasureContent {
-  Attributes([this.divisions, this.key, this.staves, this.clefs, this.time]);
+  Attributes(
+      {this.divisions,
+      this.key,
+      this.staves,
+      this.clefs,
+      this.time,
+      this.measureClefs = const []});
   final int? divisions;
   final MusicalKey? key;
   final int? staves;
-  final List<Clef>? clefs;
+  final List<Clef>? clefs; // this is the merged clefs
+  final List<Clef>? measureClefs;
   final Time? time;
 
   bool get isValidForFirstMeasure =>
       divisions != null &&
       key != null &&
-      staves != null &&
+      // staves != null &&
       clefs != null &&
       clefs!.isNotEmpty &&
       time != null;
@@ -101,23 +203,26 @@ class Attributes extends MeasureContent {
       MusicalKey? key,
       int? staves,
       List<Clef>? clefs,
+      List<Clef>? measureClefs,
       Time? time}) {
     return Attributes(
-      divisions ?? this.divisions,
-      key ?? this.key,
-      staves ?? this.staves,
-      clefs ?? this.clefs,
-      time ?? this.time,
+      divisions: divisions ?? this.divisions,
+      key: key ?? this.key,
+      staves: staves ?? this.staves,
+      clefs: clefs ?? this.clefs,
+      time: time ?? this.time,
+      measureClefs: measureClefs ?? this.measureClefs,
     );
   }
 
   Attributes copyWithObject(Attributes attributes) {
     return Attributes(
-      attributes.divisions ?? divisions,
-      attributes.key ?? key,
-      attributes.staves ?? staves,
-      attributes.clefs ?? clefs,
-      attributes.time ?? time,
+      divisions: attributes.divisions ?? this.divisions,
+      key: attributes.key ?? this.key,
+      staves: attributes.staves ?? this.staves,
+      clefs: attributes.clefs ?? this.clefs,
+      time: attributes.time ?? this.time,
+      measureClefs: attributes.measureClefs ?? this.measureClefs,
     );
   }
 }
@@ -148,6 +253,7 @@ enum KeyMode {
 }
 
 typedef Fifths = int;
+
 enum CircleOfFifths {
   C_A,
   G_E,
@@ -163,6 +269,7 @@ enum CircleOfFifths {
   Bflat_G,
   F_D
 }
+
 const Map<CircleOfFifths, Fifths> _fifthsToIntMap = {
   CircleOfFifths.C_A: 0,
   CircleOfFifths.G_E: 1,
@@ -197,34 +304,50 @@ class Note extends MeasureContent {
   final int voice;
   final int staff;
   final List<Notation> notations;
+
+  Note copyWith({int staff = 1}) {
+    if (this is RestNote) {
+      return RestNote(this.duration, this.voice, staff, this.notations);
+    }
+    if (this is PitchNote) {
+      final pn = this as PitchNote;
+      return PitchNote(pn.duration, pn.voice, staff, pn.notations, pn.pitch,
+          pn.type, pn.stem, pn.beams,
+          dots: pn.dots, chord: pn.chord);
+    }
+    throw "unknown note type";
+  }
 }
 
 class RestNote extends Note {
-  RestNote(super.duration, super.voice, super.staff, super.notations);
+  RestNote(int duration, int voice, int staff, List<Notation> notations)
+      : super(duration, voice, staff, notations);
 }
 
 class PitchNote extends Note {
-  PitchNote(super.duration, super.voice, super.staff, super.notations,
+  PitchNote(int duration, int voice, int staff, List<Notation> notations,
       this.pitch, this.type, this.stem, this.beams,
-      {this.dots = 0, this.chord = false});
+      {this.dots = 0, this.chord = false, this.defaultX = 0})
+      : super(duration, voice, staff, notations);
   final Pitch pitch;
   final NoteLength type;
   final StemValue stem;
   final List<Beam> beams;
   final int dots;
   final bool chord;
+  final double defaultX;
 
   NotePosition get notePosition => NotePosition(
-      tone: pitch.step,
-      length: type,
-      octave: pitch.octave,
-      accidental: pitch.accidental,
-  );
+        tone: pitch.step,
+        length: type,
+        octave: pitch.octave,
+        accidental: pitch.accidental,
+      );
 }
 
 abstract class Notation {
   Notation([PlacementValue? placementValue])
-      : placement = placementValue ?? PlacementValue.below;
+      : this.placement = placementValue ?? PlacementValue.below;
   final PlacementValue placement;
 }
 
@@ -246,11 +369,11 @@ class Fingering extends Notation {
 }
 
 class Accent extends Notation {
-  Accent([super.placement]);
+  Accent([PlacementValue? placement]) : super(placement);
 }
 
 class Staccato extends Notation {
-  Staccato([super.placement]);
+  Staccato([PlacementValue? placement]) : super(placement);
 }
 
 class Dynamics extends Notation {
@@ -308,12 +431,23 @@ class Beam {
 }
 
 class Pitch {
-  Pitch(this.step, this.octave, [this.alter]);
+  Pitch(this.step, this.octave, {this.alter = 0});
   final BaseTones step;
   final int octave;
-  final int? alter;
+  final int alter;
 
-  Accidentals get accidental => alter == null || alter == 0
+  @override
+  // List<Object?> get props => [step, octave, alter];
+  bool operator ==(Object other) {
+    if (other is Pitch) {
+      int midi = PitchToMidiNote(this);
+      int otherMidi = PitchToMidiNote(other);
+      return (midi == otherMidi);
+    }
+    return false;
+  }
+
+  Accidentals get accidental => alter == 0
       ? Accidentals.none
       : (alter == -1
           ? Accidentals.flat

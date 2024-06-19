@@ -1,68 +1,216 @@
 import 'dart:ui';
-import '../graphics/render-functions/staff.dart';
+import 'package:flutter/services.dart';
+import 'package:music_notes/graphics/render-functions/staff.dart';
 import 'package:xml/xml.dart';
 import 'dart:io';
 import 'data.dart';
-import 'package:uuid/uuid.dart';
-
-const uuid = Uuid();
 
 XmlDocument loadMusicXMLFile(String filePath) {
   final File file = File(filePath);
   return XmlDocument.parse(file.readAsStringSync());
 }
 
-Score parseMusicXML(XmlDocument document) {
-  final parts = document.findAllElements('part');
-  return Score(parts.map(parsePartXML).toList());
+// some musicXML comes with two part each one has one stave
+// in this case we merge them into one part
+Score mergeTwoPartXml(Score s) {
+  if (s.parts.length == 2) {
+    if ((s.parts[0].measures.first.attributes!.staves ?? 1) == 1 &&
+        (s.parts[1].measures.first.attributes!.staves ?? 1) == 1) {
+      List<Measure> mergedMeasures = [];
+      Attributes? prevAttributes;
+      for (int i = 0; i < s.parts[0].measures.length; i++) {
+        var m0 = s.parts[0].measures[i];
+        var m1 = s.parts[1].measures[i];
+        List<MeasureContent> mergedContents = [];
+        if (i == 0) {
+          if (m0.attributes != null && m1.attributes != null) {
+            var a0 = m0.attributes!;
+            var a1 = m1.attributes!;
+            List<Clef> mergedClefs = [];
+            mergedClefs.add(a0.clefs![0]);
+            mergedClefs.add(Clef(2, a1.clefs![0].sign));
+            Attributes mergedAttribute =
+                a0.copyWithParams(staves: 2, clefs: mergedClefs);
+            mergedContents.add(mergedAttribute);
+            prevAttributes = mergedAttribute;
+          } else {
+            print("not both part has attributes in measure 1");
+          }
+        }
+
+        for (int k = 0; k < m0.contents.length; k++) {
+          var c = m0.contents[k];
+          if (c is Attributes) {
+            if (i == 0 && k == 0) continue;
+            mergedContents.add(c.copyWithParams(staves: 2));
+          } else {
+            mergedContents.add(c);
+          }
+        }
+        // TODO fix the hard code
+        mergedContents.add(Backup(72));
+
+        for (int k = 0; k < m1.contents.length; k++) {
+          var c = m1.contents[k];
+          if (c is Attributes) {
+            if (i == 0 && k == 0) continue;
+            if (c.clefs != null && c.clefs!.length > 0) {
+              mergedContents.add(c.copyWithParams(
+                  staves: 2, clefs: [Clef(2, c.clefs![0].sign)]));
+            } else {
+              mergedContents.add(c);
+            }
+          } else {
+            if (c is Note) {
+              mergedContents.add((c as Note).copyWith(staff: 2));
+            } else {
+              mergedContents.add(c);
+            }
+          }
+        }
+
+        mergedMeasures.add(Measure(mergedContents));
+      }
+      // use first part's id and info
+      Part mergedPart = Part(s.parts[0].id, mergedMeasures);
+      mergedPart.info = s.parts[0].info;
+      Score newScore = Score([mergedPart]);
+      return newScore;
+    }
+  }
+  return s;
 }
 
+Score parseMusicXML(XmlDocument document) {
+  final scoreParts = document.findAllElements('score-part');
+  var scorePartsParsed = scoreParts.map(parseScorePartXML).toList();
+  Map<String, ScorePart> scorePartMap = {};
+  for (var sp in scorePartsParsed) {
+    scorePartMap[sp.partId] = sp;
+  }
+  final parts = document.findAllElements('part');
+  final partsParsed = parts.map(parsePartXML).toList();
+  final List<Part> pianoParts = [];
+  final List<Part> otherParts = [];
+  for (var p in partsParsed) {
+    p.info = scorePartMap[p.id];
+    // print("instrument ${p.info!.instName.toLowerCase()}");
+    if (p.info != null && p.info!.name.toLowerCase().contains("piano")) {
+      pianoParts.add(p);
+    } else {
+      otherParts.add(p);
+    }
+  }
+  final List<Part> sortedParts = [...pianoParts, ...otherParts];
+
+  Score s = Score(sortedParts);
+  return mergeTwoPartXml(s);
+}
+
+ScorePart parseScorePartXML(XmlElement scorePartXML) {
+  var spId = scorePartXML.getAttribute("id");
+  if (spId == null) {
+    throw FormatException("score part doesnt have id");
+  }
+  String name = scorePartXML.getElement("part-name")?.text ?? "";
+  String abbrev = scorePartXML.getElement("part-abbreviation")?.text ?? "";
+  String instName = "";
+  final inst = scorePartXML.getElement("score-instrument");
+  if (inst != null) {
+    instName = inst.getElement("instrument-name")?.text ?? "";
+  }
+  MidiInstrument midiInstrument = MidiInstrument();
+  var midiInstrumentXML = scorePartXML.getElement("midi-instrument");
+  if (midiInstrumentXML != null) {
+    int channel = int.tryParse(
+            midiInstrumentXML.getElement("midi-channel")?.text ?? "1") ??
+        1;
+    int program = int.tryParse(
+            midiInstrumentXML.getElement("midi-program")?.text ?? "1") ??
+        1;
+    double volume = double.tryParse(
+            midiInstrumentXML.getElement("volume")?.text ?? "100") ??
+        100.0;
+    midiInstrument =
+        MidiInstrument(program: program, channel: channel, volume: volume);
+  }
+  return ScorePart(
+      partId: spId,
+      name: name,
+      abbrev: abbrev,
+      instName: instName,
+      instrument: midiInstrument);
+}
+
+// Attributes? currentAttributes;
 Part parsePartXML(XmlElement partXML) {
+  final id = partXML.getAttribute("id");
+  if (id == null) {
+    throw FormatException("part doesnt have id");
+  }
   final measures = partXML.findAllElements('measure');
+  // currentAttributes = null;
   final parsedMeasures = measures.map(parseMeasureXML).toList();
+
   if (parsedMeasures.isNotEmpty &&
       (parsedMeasures.first.attributes == null ||
           !parsedMeasures.first.attributes!.isValidForFirstMeasure)) {
-    throw const FormatException(
+    throw new FormatException(
         'The first measure of a part must include Attributes');
   }
-  return Part(parsedMeasures);
+  return Part(id, parsedMeasures);
 }
 
 Measure parseMeasureXML(XmlElement measureXML) {
   final childElements = measureXML.children.whereType<XmlElement>();
-  final List<MeasureContent> contents = childElements.map((child) {
+
+  final List<MeasureContent> contents = [];
+
+  MeasureContent? prev = null;
+  for (var child in childElements) {
+    MeasureContent? current;
     switch (child.name.qualified) {
       case 'attributes':
-        {
-          return parseAttributesXML(child);
-        }
+        Attributes? a = parseAttributesXML(child);
+        // if (a != null) currentAttributes = a;
+        current = a;
+        break;
       case 'barline':
-        {
-          return parseBarlineXML(child);
-        }
+        current = parseBarlineXML(child);
+        break;
       case 'direction':
-        {
-          return parseDirectionXML(child);
-        }
+        current = parseDirectionXML(child);
+        break;
       case 'note':
-        {
-          return parseNoteXML(child);
-        }
+        current = parseNoteXML(child);
+        break;
       case 'backup':
-        {
-          return parseBackupXML(child);
-        }
+        current = parseBackupXML(child);
+        break;
       case 'forward':
-        {
-          return parseForwardXML(child);
-        }
+        current = parseForwardXML(child);
+        break;
       default:
-        {
-          return null;
-        }
+        current = null;
     }
-  }).whereType<MeasureContent>().toList();
+    // we delay adding attributes because we want to
+    // merge consecutive attributes into one
+    if (current is Attributes) {
+      if (prev is Attributes) {
+        prev = prev.copyWithObject(current);
+      } else {
+        prev = current;
+      }
+    } else {
+      if (prev is Attributes) {
+        contents.add(prev);
+      }
+      if (current != null) {
+        contents.add(current);
+      }
+      prev = current;
+    }
+  }
 
   return Measure(contents);
 }
@@ -92,33 +240,75 @@ Attributes? parseAttributesXML(XmlElement attributesXML) {
   }
 
   final stavesElmt = attributesXML.getElement('staves');
-  final int? staves =
-      stavesElmt != null ? int.parse(stavesElmt.innerText) : null;
+  // int staves = stavesElmt != null ? int.parse(stavesElmt.innerText) : 1;
+  int? staves;
+  if (stavesElmt != null) {
+    staves = int.parse(stavesElmt.innerText);
+  }
 
   final clefElmts = attributesXML.findAllElements('clef');
   List<Clef>? clefs;
   if (clefElmts.isNotEmpty) {
-    clefs = clefElmts.map((clefElmt) {
-      final signElmt = clefElmt.getElement('sign');
-      final String? signString = signElmt?.innerText;
-      final Clefs? sign = signString != null
-          ? Clefs.values.firstWhere((e) => e.toString() == 'Clefs.$signString')
-          : null;
+    clefs = clefElmts
+        .map((clefElmt) {
+          final signElmt = clefElmt.getElement('sign');
+          final String? signString = signElmt?.innerText;
+          final Clefs? sign = signString != null
+              ? Clefs.values
+                  .firstWhere((e) => e.toString() == 'Clefs.$signString')
+              : null;
 
-      final int number = int.parse(clefElmt.getAttribute('number') ?? '1');
+          final int number = int.parse(clefElmt.getAttribute('number') ?? '1');
 
-      if (sign != null) {
-        return Clef(number, sign);
-      } else {
-        return null;
+          if (sign != null) {
+            return Clef(number, sign);
+          } else
+            return null;
+        })
+        .whereType<Clef>()
+        .toList();
+  }
+  // merge with current attributes
+  // lets not merge it here, but use the MeasureContext
+  /*
+
+  List<Clef>? measureClefs = clefs;
+  if (staves > 0 && ((clefs?.length ?? 0) < staves)) {
+    List<Clef> mergedClefs = [];
+    for (int i = 1; i <= staves; i++) {
+      bool added = false;
+      for (var c in clefs ?? <Clef>[]) {
+        if (c.staffNumber == i) {
+          mergedClefs.add(c);
+          added = true;
+          break;
+        }
       }
-    }).whereType<Clef>().toList();
+      if (!added) {
+        if (currentAttributes != null && currentAttributes!.clefs != null) {
+          for (var c in currentAttributes!.clefs!) {
+            if (c.staffNumber == i) {
+              mergedClefs.add(c);
+              added = true;
+              break;
+            }
+          }
+        }
+      }
+    }
+    clefs = mergedClefs;
   }
+  */
 
-  if ((staves ?? 0) != (clefs != null ? clefs.length : 0)) {
-    throw const FormatException(
+  /*
+  if (staves != (clefs != null ? clefs.length : 0)) {
+    throw new FormatException(
         'The number of staves has to meet the number of clefs');
+
+    // tao: set staves equal to clefs for now
+    // staves = (clefs != null ? clefs.length : 0);
   }
+  */
 
   final timeElmt = attributesXML.getElement('time');
   Time? time;
@@ -135,15 +325,20 @@ Attributes? parseAttributesXML(XmlElement attributesXML) {
       time = Time(beats, beatType);
     }
   }
-  if (divisions == null &&
-      key == null &&
-      staves == null &&
-      (clefs == null || clefs.isEmpty) &&
-      time == null) {
-    return null;
-  } else {
-    return Attributes(divisions, key, staves, clefs, time);
-  }
+
+  var a = Attributes(
+      divisions: divisions,
+      key: key,
+      staves: staves,
+      clefs: clefs,
+      // measureClefs: measureClefs,
+      time: time);
+
+  /*
+  if (currentAttributes != null) {
+    return currentAttributes!.copyWithObject(a);
+  }*/
+  return a;
 }
 
 Barline parseBarlineXML(XmlElement barlineXML) {
@@ -190,12 +385,13 @@ Direction? parseDirectionXML(XmlElement directionXML) {
       break;
     case null:
       {
-        throw AssertionError(
+        throw new AssertionError(
             'direction-type element missing in direction.');
       }
     default:
       {
-        return null;
+        // return null;
+        type = DirectionType();
       }
   }
   final String? placementString = directionXML.getAttribute('placement');
@@ -207,8 +403,12 @@ Direction? parseDirectionXML(XmlElement directionXML) {
   final staffElmt = directionXML.getElement('staff');
   final int? staff = staffElmt != null ? int.parse(staffElmt.innerText) : null;
 
+  final soundElmt = directionXML.getElement('sound');
+  final int tempo =
+      soundElmt != null ? int.parse(soundElmt.getAttribute("tempo") ?? "0") : 0;
+
   if (type != null && staff != null) {
-    return Direction(type, staff, placement);
+    return Direction(type, staff, placement: placement, tempo: tempo);
   } else {
     return null;
   }
@@ -277,7 +477,7 @@ Words? parseWordsXML(XmlElement wordsXML) {
       fontWeight = null;
   }
 
-  if (content.isNotEmpty) {
+  if (content.length > 0) {
     return Words(content,
         fontFamily: fontFamily,
         fontSize: fontSize,
@@ -297,6 +497,9 @@ PlacementValue? parsePlacementAttr(XmlElement someXML) {
 }
 
 Note? parseNoteXML(XmlElement noteXML) {
+  final defaultX =
+      double.tryParse(noteXML.getAttribute("default-x") ?? "0") ?? 0;
+
   final pitchElmt = noteXML.getElement('pitch');
   final pitch = pitchElmt != null ? parsePitchXML(pitchElmt) : null;
 
@@ -341,13 +544,14 @@ Note? parseNoteXML(XmlElement noteXML) {
       : null;
 
   final staffElmt = noteXML.getElement('staff');
-  final int? staff = staffElmt != null ? int.parse(staffElmt.innerText) : null;
+  int? staff = staffElmt != null ? int.parse(staffElmt.innerText) : 1;
 
   final beamElmts = noteXML.findAllElements('beam');
   final beams = beamElmts.map(parseBeamXML).whereType<Beam>().toList();
 
-  final notationElmts = noteXML.findAllElements('notation');
-  final notations = notationElmts.map(parseNotationXML).expand((e) => e).toList();
+  final notationElmts = noteXML.findAllElements('notations');
+  final notations =
+      notationElmts.map(parseNotationXML).expand((e) => e).toList();
 
   final dots = noteXML.findAllElements('dot').length;
 
@@ -362,7 +566,7 @@ Note? parseNoteXML(XmlElement noteXML) {
       staff != null) {
     return PitchNote(
         duration, voice, staff, notations, pitch, type, stem, beams,
-        dots: dots, chord: chord);
+        dots: dots, chord: chord, defaultX: defaultX);
   } else {
     return null;
   }
@@ -384,7 +588,8 @@ Pitch? parsePitchXML(XmlElement pitchXML) {
   final int? alter = alterElmt != null ? int.parse(alterElmt.innerText) : null;
 
   if (step != null && octave != null) {
-    return Pitch(step, octave - 2, alter);
+    // tao: why - 2 here, undo this seems to break other things
+    return Pitch(step, octave - 2, alter: alter ?? 0);
   } else {
     return null;
   }
@@ -393,22 +598,34 @@ Pitch? parsePitchXML(XmlElement pitchXML) {
 int currentBeamId = 0;
 int beamStructsOpen = 0;
 
+Map<String, BeamValue> stringBeamValueMap = {
+  "continue": BeamValue.continued,
+  "backward hook": BeamValue.backward,
+  "forward hook": BeamValue.forward,
+  "begin": BeamValue.begin,
+  "end": BeamValue.end,
+};
+
+BeamValue? stringToBeamValue(String s) {}
 Beam? parseBeamXML(XmlElement beamXML) {
-  final String valueString = beamXML.innerText;
-  final BeamValue? value = valueString != null
-      ? BeamValue.values
-          .firstWhere((e) => e.toString() == 'BeamValue.continued' ? valueString == 'continue' : e.toString() == 'BeamValue.$valueString')
-      : null;
-  if(value == BeamValue.begin) {
+  final String? valueString = beamXML.innerText;
+  final BeamValue? value =
+      valueString != null ? stringBeamValueMap[valueString] : null;
+  if (value == BeamValue.begin) {
     beamStructsOpen++;
-  } else if(value == BeamValue.end) {
+  } else if (value == BeamValue.end) {
     beamStructsOpen--;
   }
 
   final int number = int.parse(beamXML.getAttribute('number') ?? '1');
 
   if (value != null) {
-    return Beam(beamStructsOpen > 0 || value == BeamValue.forward ? currentBeamId : currentBeamId++, number, value);
+    return Beam(
+        beamStructsOpen > 0 || value == BeamValue.forward
+            ? currentBeamId
+            : currentBeamId++,
+        number,
+        value);
   } else {
     return null;
   }
@@ -419,15 +636,19 @@ Iterable<Notation> parseNotationXML(XmlElement notationXML) {
 
   final fingeringElmt = notationXML.findAllElements('fingering');
   final String? fingering =
-      fingeringElmt.isNotEmpty ? fingeringElmt.first.innerText : null;
+      fingeringElmt.length >= 1 ? fingeringElmt.first.innerText : null;
   if (fingering != null) {
     result.add(Fingering(fingering, parsePlacementAttr(fingeringElmt.first)));
   }
 
-  final tiedElement = notationXML.getElement('tied');
-  final Tied? tied = tiedElement != null ? parseTiedXML(tiedElement) : null;
-  if (tied != null) {
-    result.add(tied);
+  final tiedElements = notationXML.findAllElements('tied');
+  if (!tiedElements.isEmpty) {
+    for (var tiedElement in tiedElements) {
+      final Tied? tied = parseTiedXML(tiedElement);
+      if (tied != null) {
+        result.add(tied);
+      }
+    }
   }
 
   final slurElement = notationXML.getElement('slur');
@@ -437,13 +658,13 @@ Iterable<Notation> parseNotationXML(XmlElement notationXML) {
   }
 
   final staccatoElmt = notationXML.findAllElements('staccato');
-  final bool staccato = staccatoElmt.isNotEmpty;
+  final bool staccato = staccatoElmt.length >= 1;
   if (staccato) {
     result.add(Staccato(parsePlacementAttr(staccatoElmt.first)));
   }
 
   final accentElmt = notationXML.findAllElements('accent');
-  final bool accent = accentElmt.isNotEmpty;
+  final bool accent = accentElmt.length >= 1;
   if (accent) {
     result.add(Accent(parsePlacementAttr(accentElmt.first)));
   }

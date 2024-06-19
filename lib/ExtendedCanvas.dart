@@ -1,3 +1,4 @@
+// import 'dart:html';
 import 'dart:typed_data';
 import 'dart:ui';
 
@@ -6,10 +7,17 @@ import 'dart:ui';
 /// translation: https://github.com/flutter/flutter/issues/38721
 class XCanvas implements Canvas {
   Offset _currentTranslation;
-  final List<Offset> _translationStack;
+  List<Offset> _translationStack;
   late Canvas _canvas;
-  XCanvas(Canvas canvas): _currentTranslation = const Offset(0,0), _translationStack = [const Offset(0,0)] {
+  XCanvas(Canvas canvas)
+      : _currentTranslation = Offset(0, 0),
+        _translationStack = [Offset(0, 0)] {
     _canvas = canvas;
+  }
+
+  @override
+  void restoreToCount(int count) {
+    return _canvas.restoreToCount(count);
   }
 
   @override
@@ -18,8 +26,24 @@ class XCanvas implements Canvas {
     _currentTranslation += Offset(dx, dy);
   }
 
+  // not sure what the original function means
+  // change it to actaully call _canvas.translate if needed
+  void setTranslation(Offset o) {
+    var delta = o - _currentTranslation;
+    _canvas.translate(delta.dx, delta.dy);
+
+    _currentTranslation = o;
+  }
+
   Offset getTranslation() {
     return _currentTranslation;
+  }
+
+  void executeGlobally(VoidCallback command) {
+    save();
+    translate(-_currentTranslation.dx, -_currentTranslation.dy);
+    command();
+    restore();
   }
 
   Offset localToGlobal(Offset local) {
@@ -28,13 +52,6 @@ class XCanvas implements Canvas {
 
   Offset globalToLocal(Offset global) {
     return global - _currentTranslation;
-  }
-
-  void executeGlobally(VoidCallback command) {
-    save();
-    translate(-_currentTranslation.dx, -_currentTranslation.dy);
-    command();
-    restore();
   }
 
   @override
@@ -48,18 +65,22 @@ class XCanvas implements Canvas {
   }
 
   @override
-  void clipRect(Rect rect, {ClipOp clipOp = ClipOp.intersect, bool doAntiAlias = true}) {
+  void clipRect(Rect rect,
+      {ClipOp clipOp = ClipOp.intersect, bool doAntiAlias = true}) {
     _canvas.clipRect(rect, clipOp: clipOp, doAntiAlias: doAntiAlias);
   }
 
   @override
-  void drawArc(Rect rect, double startAngle, double sweepAngle, bool useCenter, Paint paint) {
+  void drawArc(Rect rect, double startAngle, double sweepAngle, bool useCenter,
+      Paint paint) {
     _canvas.drawArc(rect, startAngle, sweepAngle, useCenter, paint);
   }
 
   @override
-  void drawAtlas(Image atlas, List<RSTransform> transforms, List<Rect> rects, List<Color>? colors, BlendMode? blendMode, Rect? cullRect, Paint paint) {
-    _canvas.drawAtlas(atlas, transforms, rects, colors, blendMode, cullRect, paint);
+  void drawAtlas(Image atlas, List<RSTransform> transforms, List<Rect> rects,
+      List<Color>? colors, BlendMode? blendMode, Rect? cullRect, Paint paint) {
+    _canvas.drawAtlas(
+        atlas, transforms, rects, colors, blendMode, cullRect, paint);
   }
 
   @override
@@ -133,8 +154,10 @@ class XCanvas implements Canvas {
   }
 
   @override
-  void drawRawAtlas(Image atlas, Float32List rstTransforms, Float32List rects, Int32List? colors, BlendMode? blendMode, Rect? cullRect, Paint paint) {
-    _canvas.drawRawAtlas(atlas, rstTransforms, rects, colors, blendMode, cullRect, paint);
+  void drawRawAtlas(Image atlas, Float32List rstTransforms, Float32List rects,
+      Int32List? colors, BlendMode? blendMode, Rect? cullRect, Paint paint) {
+    _canvas.drawRawAtlas(
+        atlas, rstTransforms, rects, colors, blendMode, cullRect, paint);
   }
 
   @override
@@ -148,7 +171,8 @@ class XCanvas implements Canvas {
   }
 
   @override
-  void drawShadow(Path path, Color color, double elevation, bool transparentOccluder) {
+  void drawShadow(
+      Path path, Color color, double elevation, bool transparentOccluder) {
     _canvas.drawShadow(path, color, elevation, transparentOccluder);
   }
 
@@ -165,7 +189,7 @@ class XCanvas implements Canvas {
   @override
   void restore() {
     _canvas.restore();
-    if(_translationStack.length > 1) {
+    if (_translationStack.length > 1) {
       _currentTranslation = _translationStack.removeLast();
     }
   }
@@ -202,22 +226,16 @@ class XCanvas implements Canvas {
   }
 
   @override
-  Rect getDestinationClipBounds() {
-    return _canvas.getDestinationClipBounds();
-  }
-
-  @override
   Rect getLocalClipBounds() {
     return _canvas.getLocalClipBounds();
   }
 
   @override
-  Float64List getTransform() {
-    return _canvas.getTransform();
+  Rect getDestinationClipBounds() {
+    return _canvas.getDestinationClipBounds();
   }
 
-  @override
-  void restoreToCount(int count) {
-    _canvas.restoreToCount(count);
+  Float64List getTransform() {
+    return _canvas.getTransform();
   }
 }

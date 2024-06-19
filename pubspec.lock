@@ -162,7 +162,7 @@ packages:
     source: hosted
     version: "3.1.1"
   copy_with_extension:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: copy_with_extension
       sha256: "9c17d2b9a041ad19c97aa544c46a60f192cd409529bb9cfb98f48f336bb84d31"
