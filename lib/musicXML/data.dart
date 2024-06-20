@@ -329,6 +329,7 @@ class PitchNote extends Note {
       this.pitch, this.type, this.stem, this.beams,
       {this.dots = 0, this.chord = false, this.defaultX = 0})
       : super(duration, voice, staff, notations);
+
   final Pitch pitch;
   final NoteLength type;
   final StemValue stem;

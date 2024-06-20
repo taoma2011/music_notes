@@ -527,6 +527,8 @@ paintMeasure(
           noteStaff = 2;
         }
         noteCopy = element.note.copyWith(staff: noteStaff) as PitchNote;
+      } else {
+        noteCopy = element.note;
       }
       paintPitchNote(drawC, mc, noteCopy!, noAdvance: true, color: color);
     });
