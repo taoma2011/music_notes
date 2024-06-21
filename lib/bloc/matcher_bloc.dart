@@ -78,6 +78,11 @@ class MatcherBloc extends Bloc<MatcherEvent, MatcherState> {
   }
 
   MatcherBloc() : super(MatcherState()) {
+    on<MatcherRemoveAllPlayNoteEvent>((event, emit) {
+      emit(state.copyWith(
+        playNotes: [],
+      ));
+    });
     on<MatcherAddPlayNoteEvent>((event, emit) {
       List<MatchCandidate> newScoreNotes = [];
       Map<NoteId, String> matchStatus = Map.from(state.matchStatus);

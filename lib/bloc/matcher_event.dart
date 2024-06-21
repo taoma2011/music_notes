@@ -7,6 +7,10 @@ abstract class MatcherEvent extends Equatable {
   List<Object> get props => [];
 }
 
+class MatcherRemoveAllPlayNoteEvent extends MatcherEvent {
+  MatcherRemoveAllPlayNoteEvent();
+}
+
 class MatcherAddPlayNoteEvent extends MatcherEvent {
   final Pitch pitch;
   final NoteId noteId;
