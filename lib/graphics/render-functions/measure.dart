@@ -426,10 +426,18 @@ paintMeasure(
           }
         case Attributes:
           {
+            // the attributes and the notes are in the same column
+            // we use the same spacing as calculated in the
+            // calculateMeasureAttributesWidth
+            var attributeStartTranslation = drawC.canvas.getTranslation();
             final Attributes a = measureContent as Attributes;
+            var attributeLength = calculateMeasureAttributesWidth(a, drawC, mc);
             paintMeasureAttributes(a, columnIndex, drawC, mc);
             // mc.currentAttributes = measureContent;
             mc.mergeAttributes(a);
+            drawC.canvas.setTranslation(Offset(
+                attributeStartTranslation.dx + attributeLength,
+                attributeStartTranslation.dy));
             break;
           }
         case Direction:
@@ -941,14 +949,17 @@ calculateMeasureAttributesWidth(
   final clefs = attributes.clefs;
   final lineSpacing = drawC.lineSpacing;
   if (fifths != null && staves != null && clefs != null) {
-    length += 20 + drawC.lineSpacing;
+    // the first term is the clef
+    length += (drawC.lineSpacing * 4) + drawC.lineSpacing;
 
     var accidentals = mainToneAccidentalsMapForFClef[fifths]!;
-    length += (10 + drawC.lineSpacing) * accidentals.length;
+    // the first factor is the accidental and space between accidentals
+    length += (drawC.lineSpacing + drawC.lineSpacing) * accidentals.length;
   }
   // time signature
   if (attributes.time != null && staves != null && clefs != null) {
-    length += 20 + drawC.lineSpacing;
+    // first term is the time signature
+    length += (drawC.lineSpacing * 2) + drawC.lineSpacing;
   }
 
   return length;
