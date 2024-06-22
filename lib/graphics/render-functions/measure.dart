@@ -13,10 +13,10 @@ import '../../musicXML/data.dart';
 import 'package:collection/collection.dart';
 
 // get the length of measure so we can decide how many to put in a single line
-Rect getMeasureLength(
-    Measure measure, MeasureContext mc, DrawingContext drawC) {
+Rect getMeasureLength(Measure measure, MeasureContext mc, DrawingContext drawC,
+    MusicLineOptions options) {
   final grid = createGridForMeasure(measure, drawC);
-  final layoutResult = layoutGrid(grid, mc, drawC);
+  final layoutResult = layoutGrid(grid, mc, drawC, options);
   /*
   double left = 0, right = 0;
 
@@ -248,7 +248,7 @@ paintMeasure(
   final grid = createGridForMeasure(measure, drawC);
   // print('paint measure');
 
-  final layoutData = layoutGrid(grid, mc, drawC);
+  final layoutData = layoutGrid(grid, mc, drawC, options);
 
   var measureStartTranslation = drawC.canvas.getTranslation();
 
@@ -405,12 +405,15 @@ paintMeasure(
       }
     }
 
+    bool startsWithAttributes =
+        (column.length > 0 && column[0].runtimeType == Attributes);
+
     drawC.canvas.setTranslation(Offset(
         measureStartTranslation.dx +
             (!layouts.userDefinedX.isNaN
                 ? layouts.userDefinedX
                 : layouts.layoutX) +
-            pitchNoteLeftOffset,
+            (!startsWithAttributes ? pitchNoteLeftOffset : drawC.lineSpacing),
         measureStartTranslation.dy));
 
     column.forEachIndexed((index, measureContent) {
@@ -431,12 +434,15 @@ paintMeasure(
             // calculateMeasureAttributesWidth
             var attributeStartTranslation = drawC.canvas.getTranslation();
             final Attributes a = measureContent as Attributes;
-            var attributeLength = calculateMeasureAttributesWidth(a, drawC, mc);
-            paintMeasureAttributes(a, columnIndex, drawC, mc);
+            var attributeLength =
+                calculateMeasureAttributesWidth(a, drawC, mc, options);
+            paintMeasureAttributes(a, columnIndex, drawC, mc, options);
             // mc.currentAttributes = measureContent;
             mc.mergeAttributes(a);
             drawC.canvas.setTranslation(Offset(
-                attributeStartTranslation.dx + attributeLength,
+                attributeStartTranslation.dx +
+                    attributeLength +
+                    pitchNoteLeftOffset,
                 attributeStartTranslation.dy));
             break;
           }
@@ -643,8 +649,8 @@ void relayout(
   }
 }
 
-MeasureContentWithLayout layoutGrid(
-    List<List<MeasureContent>> grid, MeasureContext mc, DrawingContext drawC) {
+MeasureContentWithLayout layoutGrid(List<List<MeasureContent>> grid,
+    MeasureContext mc, DrawingContext drawC, MusicLineOptions options) {
   final List<Interval> layouts = [];
   double currentX = 0;
 
@@ -654,6 +660,9 @@ MeasureContentWithLayout layoutGrid(
     final measurements = column
         .whereType<PitchNote>()
         .map((element) => calculateNoteWidth(drawC, mc, element));
+    if (column.length > 0 && column[0].runtimeType == Attributes) {
+      length += drawC.lineSpacing;
+    }
     final alignmentOffset = calculateColumnAlignment(drawC, measurements);
     // not clear why we need the abs
     length += alignmentOffset.left.abs() + alignmentOffset.right;
@@ -685,7 +694,8 @@ MeasureContentWithLayout layoutGrid(
           attributeWidth = (20 + drawC.lineSpacing).toDouble();
         } else {
           attributeWidth =
-              calculateMeasureAttributesWidth(content, drawC, mc).toDouble();
+              calculateMeasureAttributesWidth(content, drawC, mc, options)
+                  .toDouble();
         }
         print("adding attribute width $attributeWidth");
       }
@@ -862,7 +872,7 @@ paintCurrentAttributes(DrawingContext drawC, MeasureContext mc) {
 }
 
 paintMeasureAttributes(Attributes attributes, int indexInMeasure,
-    DrawingContext drawC, MeasureContext mc) {
+    DrawingContext drawC, MeasureContext mc, MusicLineOptions options) {
   final fifths = attributes.key?.fifths;
   final staves = attributes.staves;
   final clefs = attributes.clefs;
@@ -899,7 +909,9 @@ paintMeasureAttributes(Attributes attributes, int indexInMeasure,
   }
 
   // time signature
-  if (attributes.time != null && staves != null && clefs != null) {
+  if ((attributes.time != null && !options.noTimeSignature) &&
+      staves != null &&
+      clefs != null) {
     clefs
         .sorted((a, b) => a.staffNumber - b.staffNumber)
         .forEachIndexed((index, clef) {
@@ -930,8 +942,8 @@ paintMeasureAttributes(Attributes attributes, int indexInMeasure,
   }
 }
 
-calculateMeasureAttributesWidth(
-    Attributes attributes, DrawingContext drawC, MeasureContext mc) {
+calculateMeasureAttributesWidth(Attributes attributes, DrawingContext drawC,
+    MeasureContext mc, MusicLineOptions options) {
   /*
   return (attributes.key != null
           ? calculateAccidentalsForToneWidth(drawC, attributes.key!.fifths)
@@ -957,7 +969,9 @@ calculateMeasureAttributesWidth(
     length += (drawC.lineSpacing + drawC.lineSpacing) * accidentals.length;
   }
   // time signature
-  if (attributes.time != null && staves != null && clefs != null) {
+  if ((attributes.time != null && !options.noTimeSignature) &&
+      staves != null &&
+      clefs != null) {
     // first term is the time signature
     length += (drawC.lineSpacing * 2) + drawC.lineSpacing;
   }

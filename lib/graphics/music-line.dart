@@ -148,7 +148,9 @@ class MusicLineOptions {
       {this.firstBar = 0,
       this.lastBar = -1,
       this.currentAttributes,
-      this.heatMap})
+      this.heatMap,
+      this.noBarNumber = false,
+      this.noTimeSignature = false})
       : this.topMargin = staffHeight * topMarginFactor;
 
   final Score score;
@@ -158,6 +160,8 @@ class MusicLineOptions {
   final int lastBar;
   final Attributes? currentAttributes;
   final List<double>? heatMap;
+  final bool noBarNumber;
+  final bool noTimeSignature;
 
   @override
   bool operator ==(Object other) {
@@ -519,7 +523,7 @@ class ScoreLayout {
       drawC.currentMeasure = index;
       // if (index < options.firstBar) return;
       if (options.lastBar >= 0 && index >= options.lastBar) return;
-      Rect rect = getMeasureLength(measure, mc, drawC);
+      Rect rect = getMeasureLength(measure, mc, drawC, options);
 
       currentMeasureLength += rect.right;
       if (currentMeasureLength > maxWidth ||

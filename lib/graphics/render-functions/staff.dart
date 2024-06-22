@@ -45,6 +45,7 @@ enum BarLineTypes {
 }
 
 paintBarNumber(DrawingContext drawC, MusicLineOptions options, bool noAdvance) {
+  if (options.noBarNumber) return;
   if (noAdvance) {
     drawC.canvas.save();
   }
