@@ -437,6 +437,13 @@ class Pitch {
   final int octave;
   final int alter;
 
+  String toString() {
+    String alterString = "";
+    if (alter == 1) alterString = "#";
+    if (alter == -1) alterString = "b";
+    return step.name + alterString + " " + (octave + 2).toString();
+  }
+
   @override
   // List<Object?> get props => [step, octave, alter];
   bool operator ==(Object other) {
