@@ -437,10 +437,11 @@ class Pitch {
   final int octave;
   final int alter;
 
-  String toString() {
+  String toString({bool includeOctave = true}) {
     String alterString = "";
     if (alter == 1) alterString = "#";
     if (alter == -1) alterString = "b";
+    if (!includeOctave) return step.name + alterString;
     return step.name + alterString + " " + (octave + 2).toString();
   }
 

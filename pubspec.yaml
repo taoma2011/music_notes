@@ -11,10 +11,10 @@ dependencies:
   flutter:
     sdk: flutter
   plugin_platform_interface: ^2.0.2
-  xml: ^5.4.1
+  xml: ^6.1.0
   collection: ^1.17.0
   golden_toolkit: ^0.15.0
-  uuid: ^3.0.7
+  uuid: ^4.4.0
   flutter_bloc: ^8.1.6
   equatable: any
   copy_with_extension: ^4.0.0
