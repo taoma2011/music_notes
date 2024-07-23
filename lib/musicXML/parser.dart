@@ -240,11 +240,13 @@ Attributes? parseAttributesXML(XmlElement attributesXML) {
   }
 
   final stavesElmt = attributesXML.getElement('staves');
-  // int staves = stavesElmt != null ? int.parse(stavesElmt.innerText) : 1;
+  int staves = stavesElmt != null ? int.parse(stavesElmt.innerText) : 1;
+  /*
   int? staves;
   if (stavesElmt != null) {
     staves = int.parse(stavesElmt.innerText);
   }
+  */
 
   final clefElmts = attributesXML.findAllElements('clef');
   List<Clef>? clefs;
