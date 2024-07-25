@@ -471,7 +471,7 @@ paintMeasure(
               int pnEnd = pnStart + pn.duration;
               if (currentPlay.currentColumn >= pnStart &&
                   currentPlay.currentColumn < pnEnd) {
-                noteColor = Colors.red;
+                noteColor = Colors.blue;
               }
             }
             // check if this note is matched by play
@@ -521,7 +521,7 @@ paintMeasure(
             (n.column == columnIndex && n.measure == drawC.currentMeasure))
         .toList();
     playNote.forEach((element) {
-      Color color = Colors.blue;
+      Color color = Colors.red;
       NoteId noteId = NoteId(
           measure: drawC.currentMeasure,
           column: columnIndex,

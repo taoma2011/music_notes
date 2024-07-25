@@ -526,8 +526,10 @@ class ScoreLayout {
       Rect rect = getMeasureLength(measure, mc, drawC, options);
 
       currentMeasureLength += rect.right;
-      if (currentMeasureLength > maxWidth ||
-          index == options.score.parts.first.measures.length - 1) {
+      if (currentMeasureLength >
+              maxWidth /*||
+          index == options.score.parts.first.measures.length - 1*/
+          ) {
         if (currentMeasureCount == 0) {
           // we need to put it in anyway
           mc.mergeMeasureAttributes(measure);
@@ -571,6 +573,12 @@ class ScoreLayout {
         currentMeasureCount++;
       }
     });
+    if (currentMeasureCount > 0) {
+      // add the last row
+      rowMeasureBounds.add(
+          [currentMeasureStart, currentMeasureStart + currentMeasureCount]);
+      // rowAttributes.add(mc.currentAttributes!.copyWithParams());
+    }
     return LayoutResult(rowMeasureBounds, rowAttributes);
   }
 }
