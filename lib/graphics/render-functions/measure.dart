@@ -32,7 +32,7 @@ Rect getMeasureLength(Measure measure, MeasureContext mc, DrawingContext drawC,
         if (defaultX == 0) {
           defaultX = pn.defaultX;
         } else if (pn.defaultX != defaultX) {
-          print("different default x in same column");
+          //print("different default x in same column");
           defaultX = 0;
           break;
         }

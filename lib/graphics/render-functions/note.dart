@@ -296,7 +296,7 @@ paintPitchNote(DrawingContext drawC, MeasureContext mc, PitchNote note,
       if (currentBeamPointMapForThisId[elmt.number] == null) {
         currentBeamPointMapForThisId[elmt.number] = [];
       }
-      print("measure ${drawC.currentMeasure} beam ${elmt.number}");
+      // print("measure ${drawC.currentMeasure} beam ${elmt.number}");
       /*
       if (beamChordHint != null) {
         print("beamcord ${beamChordHint}");
@@ -463,7 +463,7 @@ paintPitchNote(DrawingContext drawC, MeasureContext mc, PitchNote note,
         hasPrevOffset = true;
         prevStartOffset = startOffset;
         prevEndOffset = endOffset;
-        print("draw beam ${startOffset} ${endOffset}");
+        // print("draw beam ${startOffset} ${endOffset}");
         paintBeam(drawC, startOffset, endOffset);
 
         for (final beamPoint in beamPoints.value) {

@@ -228,7 +228,7 @@ class _MusicLineState extends State<MusicLine> {
                 builder: (context, matcherState) =>
                     BlocBuilder<Cubit<CurrentPlay>, CurrentPlay>(
                         builder: (context, currentPlay) {
-                      print("current measure is ${currentPlay.currentMeasure}");
+                      // print("current measure is ${currentPlay.currentMeasure}");
                       return CustomPaint(
                         size: Size(newWidth, newHeight),
                         painter: ForegroundPainter(widget.options,
