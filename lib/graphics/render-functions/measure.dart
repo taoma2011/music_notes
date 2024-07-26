@@ -465,6 +465,7 @@ paintMeasure(
 
             var pn = measureContent as PitchNote;
             Color noteColor = Colors.black;
+            bool isCurrentColumn = false;
             if (playingThisMeasure) {
               // check if this note is active
               int pnStart = columnIndex;
@@ -472,6 +473,7 @@ paintMeasure(
               if (currentPlay.currentColumn >= pnStart &&
                   currentPlay.currentColumn < pnEnd) {
                 noteColor = Colors.blue;
+                isCurrentColumn = true;
               }
             }
             // check if this note is matched by play
@@ -491,6 +493,13 @@ paintMeasure(
                 beamChordHint: beamChordHintMap[index],
                 xAdjustment: xAdjustmentMap[index] ?? 0);
 
+            if (isCurrentColumn) {
+              drawC.canvas.save();
+              drawC.canvas.translate(0, 0);
+              drawC.canvas.drawRect(Rect.fromLTWH(0, -40, 15, 100),
+                  Paint()..color = Colors.blue.withAlpha(100));
+              drawC.canvas.restore();
+            }
             break;
           }
         case RestNote:

@@ -8,6 +8,7 @@ class MatcherState extends Equatable {
   final int matched;
   final int unmatchedScoreNotes;
   final int unmatchedPlayNotes;
+  final int inaccuratePlayNotes;
   final Map<NoteId, String> matchStatus;
   const MatcherState(
       {this.scoreNotes = const [],
@@ -16,7 +17,8 @@ class MatcherState extends Equatable {
       this.playing = false,
       this.matched = 0,
       this.unmatchedPlayNotes = 0,
-      this.unmatchedScoreNotes = 0});
+      this.unmatchedScoreNotes = 0,
+      this.inaccuratePlayNotes = 0});
 
   @override
   List<Object> get props => [
@@ -25,6 +27,7 @@ class MatcherState extends Equatable {
         matched,
         unmatchedPlayNotes,
         unmatchedScoreNotes,
+        inaccuratePlayNotes,
         matchStatus,
         playing
       ];

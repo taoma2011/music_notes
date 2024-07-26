@@ -14,7 +14,9 @@ class MatcherRemoveAllPlayNoteEvent extends MatcherEvent {
 class MatcherAddPlayNoteEvent extends MatcherEvent {
   final Pitch pitch;
   final NoteId noteId;
-  MatcherAddPlayNoteEvent({required this.pitch, required this.noteId});
+  final bool inaccurate;
+  MatcherAddPlayNoteEvent(
+      {required this.pitch, required this.noteId, this.inaccurate = false});
 }
 
 // add a note from score

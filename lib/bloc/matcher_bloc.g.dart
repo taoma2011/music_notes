@@ -7,6 +7,8 @@ part of 'matcher_bloc.dart';
 // **************************************************************************
 
 abstract class _$MatcherStateCWProxy {
+  MatcherState inaccuratePlayNotes(int inaccuratePlayNotes);
+
   MatcherState matchStatus(Map<NoteId, String> matchStatus);
 
   MatcherState matched(int matched);
@@ -28,6 +30,7 @@ abstract class _$MatcherStateCWProxy {
   /// MatcherState(...).copyWith(id: 12, name: "My name")
   /// ````
   MatcherState call({
+    int? inaccuratePlayNotes,
     Map<NoteId, String>? matchStatus,
     int? matched,
     List<MatchCandidate>? playNotes,
@@ -43,6 +46,10 @@ class _$MatcherStateCWProxyImpl implements _$MatcherStateCWProxy {
   final MatcherState _value;
 
   const _$MatcherStateCWProxyImpl(this._value);
+
+  @override
+  MatcherState inaccuratePlayNotes(int inaccuratePlayNotes) =>
+      this(inaccuratePlayNotes: inaccuratePlayNotes);
 
   @override
   MatcherState matchStatus(Map<NoteId, String> matchStatus) =>
@@ -79,6 +86,7 @@ class _$MatcherStateCWProxyImpl implements _$MatcherStateCWProxy {
   /// MatcherState(...).copyWith(id: 12, name: "My name")
   /// ````
   MatcherState call({
+    Object? inaccuratePlayNotes = const $CopyWithPlaceholder(),
     Object? matchStatus = const $CopyWithPlaceholder(),
     Object? matched = const $CopyWithPlaceholder(),
     Object? playNotes = const $CopyWithPlaceholder(),
@@ -88,6 +96,12 @@ class _$MatcherStateCWProxyImpl implements _$MatcherStateCWProxy {
     Object? unmatchedScoreNotes = const $CopyWithPlaceholder(),
   }) {
     return MatcherState(
+      inaccuratePlayNotes:
+          inaccuratePlayNotes == const $CopyWithPlaceholder() ||
+                  inaccuratePlayNotes == null
+              ? _value.inaccuratePlayNotes
+              // ignore: cast_nullable_to_non_nullable
+              : inaccuratePlayNotes as int,
       matchStatus:
           matchStatus == const $CopyWithPlaceholder() || matchStatus == null
               ? _value.matchStatus

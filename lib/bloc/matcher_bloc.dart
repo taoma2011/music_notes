@@ -43,15 +43,18 @@ class NoteId extends Equatable {
   // and the midiKey is the key played
   final int midiKey;
   final bool fromPlay;
+  final bool inaccurate;
   NoteId(
       {required this.measure,
       required this.column,
       required this.index,
       required this.midiKey,
-      required this.fromPlay});
+      required this.fromPlay,
+      this.inaccurate = false});
   // NoteId.invalid() : this(measure: -1, column: -1, index: -1);
   @override
-  List<Object?> get props => [measure, column, index, midiKey, fromPlay];
+  List<Object?> get props =>
+      [measure, column, index, midiKey, fromPlay, inaccurate];
 }
 
 class MatchCandidate {
@@ -84,6 +87,11 @@ class MatcherBloc extends Bloc<MatcherEvent, MatcherState> {
       ));
     });
     on<MatcherAddPlayNoteEvent>((event, emit) {
+      if (event.inaccurate) {
+        emit(
+            state.copyWith(inaccuratePlayNotes: state.inaccuratePlayNotes + 1));
+        return;
+      }
       List<MatchCandidate> newScoreNotes = [];
       Map<NoteId, String> matchStatus = Map.from(state.matchStatus);
       bool matched = false;
