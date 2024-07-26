@@ -41,6 +41,20 @@ List<XmlPitch> midiKeyToXmlPitch = [
   XmlPitch(BaseTones.B, 0),
 ];
 
+List<XmlPitch> midiKeyFlatToXmlPitch = [
+  XmlPitch(BaseTones.C, 0),
+  XmlPitch(BaseTones.D, -1),
+  XmlPitch(BaseTones.D, 0),
+  XmlPitch(BaseTones.E, -1),
+  XmlPitch(BaseTones.E, 0),
+  XmlPitch(BaseTones.F, 0),
+  XmlPitch(BaseTones.G, -1),
+  XmlPitch(BaseTones.G, 0),
+  XmlPitch(BaseTones.A, -1),
+  XmlPitch(BaseTones.A, 0),
+  XmlPitch(BaseTones.B, -1),
+  XmlPitch(BaseTones.B, 0),
+];
 // this convert flat to sharp or regular notes
 Map<BaseTones, XmlPitch> flatNormlizedPitch = {
   BaseTones.C: XmlPitch(BaseTones.B, 0),
@@ -52,9 +66,9 @@ Map<BaseTones, XmlPitch> flatNormlizedPitch = {
   BaseTones.B: XmlPitch(BaseTones.A, 1),
 };
 
-PitchNote midiNoteToPitchNote(int midiNote) {
+PitchNote midiNoteToPitchNote(int midiNote, {bool useFlat = false}) {
   int i = midiNote % 12;
-  var p = midiKeyToXmlPitch[i];
+  var p = useFlat ? midiKeyFlatToXmlPitch[i] : midiKeyToXmlPitch[i];
 
   // NOTE: pitchNote octave is standard octave - 2
   // int octave = midiNote ~/ 12 - 1;
@@ -150,7 +164,8 @@ class MusicLineOptions {
       this.currentAttributes,
       this.heatMap,
       this.noBarNumber = false,
-      this.noTimeSignature = false})
+      this.noTimeSignature = false,
+      this.noCurrentNoteLine = false})
       : this.topMargin = staffHeight * topMarginFactor;
 
   final Score score;
@@ -162,6 +177,7 @@ class MusicLineOptions {
   final List<double>? heatMap;
   final bool noBarNumber;
   final bool noTimeSignature;
+  final bool noCurrentNoteLine;
 
   @override
   bool operator ==(Object other) {

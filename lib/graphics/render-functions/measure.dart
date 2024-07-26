@@ -493,7 +493,7 @@ paintMeasure(
                 beamChordHint: beamChordHintMap[index],
                 xAdjustment: xAdjustmentMap[index] ?? 0);
 
-            if (isCurrentColumn) {
+            if (isCurrentColumn && !options.noCurrentNoteLine) {
               drawC.canvas.save();
               drawC.canvas.translate(0, 0);
               drawC.canvas.drawRect(Rect.fromLTWH(0, -40, 15, 100),
