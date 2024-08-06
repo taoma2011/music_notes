@@ -33,6 +33,12 @@ void updatePracticeTolerance(int divisions) {
   */
 }
 
+//
+// This is actually all the properties of a note, not an id
+// the problem with this is, for play note, it could be that
+// the same pitch has been played twice, if we use
+// the current id it cannot distinguish
+//
 class NoteId extends Equatable {
   final int measure;
   final int column;
@@ -44,17 +50,18 @@ class NoteId extends Equatable {
   final int midiKey;
   final bool fromPlay;
   final bool inaccurate;
+  final double accuracy; // [-0.5, 0.5]
   NoteId(
       {required this.measure,
       required this.column,
       required this.index,
       required this.midiKey,
       required this.fromPlay,
-      this.inaccurate = false});
+      this.inaccurate = false,
+      this.accuracy = 0});
   // NoteId.invalid() : this(measure: -1, column: -1, index: -1);
   @override
-  List<Object?> get props =>
-      [measure, column, index, midiKey, fromPlay, inaccurate];
+  List<Object?> get props => [measure, column, index, midiKey, fromPlay];
 }
 
 class MatchCandidate {
@@ -87,13 +94,17 @@ class MatcherBloc extends Bloc<MatcherEvent, MatcherState> {
       ));
     });
     on<MatcherAddPlayNoteEvent>((event, emit) {
+      // TODO, even if its inaccurate, should still try to match it with
+      // score note to see if its correct or wrong
+      /*
       if (event.inaccurate) {
-        emit(
-            state.copyWith(inaccuratePlayNotes: state.inaccuratePlayNotes + 1));
+        emit(state.copyWith(
+            currentPlayNote: event.noteId,
+            inaccuratePlayNotes: state.inaccuratePlayNotes + 1));
         return;
-      }
+      }*/
       List<MatchCandidate> newScoreNotes = [];
-      Map<NoteId, String> matchStatus = Map.from(state.matchStatus);
+      Map<NoteId, NoteStatus> noteStatus = Map.from(state.noteStatus);
       bool matched = false;
       for (var c in state.scoreNotes) {
         if (matched) {
@@ -102,8 +113,12 @@ class MatcherBloc extends Bloc<MatcherEvent, MatcherState> {
         }
         if (c.pitch == event.pitch) {
           matched = true;
-          matchStatus[event.noteId] = "matched";
-          matchStatus[c.noteId!] = "matched";
+          noteStatus[event.noteId] = NoteStatus(
+              match: MatchStatus.matched,
+              accuracy: event.inaccurate
+                  ? NoteAccuracy.inaccurate
+                  : NoteAccuracy.accurate);
+          noteStatus[c.noteId!] = NoteStatus(match: MatchStatus.matched);
         } else {
           newScoreNotes.add(c);
         }
@@ -114,14 +129,15 @@ class MatcherBloc extends Bloc<MatcherEvent, MatcherState> {
             .add(MatchCandidate(pitch: event.pitch, noteId: event.noteId));
       }
       emit(state.copyWith(
+          currentPlayNote: event.noteId,
           matched: matched ? state.matched + 1 : state.matched,
           scoreNotes: newScoreNotes,
           playNotes: newPlayNotes,
-          matchStatus: matchStatus));
+          noteStatus: noteStatus));
     });
     on<MatcherAddScoreNoteEvent>((event, emit) {
       List<MatchCandidate> newPlayNotes = [];
-      Map<NoteId, String> matchStatus = Map.from(state.matchStatus);
+      Map<NoteId, NoteStatus> noteStatus = Map.from(state.noteStatus);
 
       bool matched = false;
       for (var c in state.playNotes) {
@@ -131,8 +147,8 @@ class MatcherBloc extends Bloc<MatcherEvent, MatcherState> {
         }
         if (c.pitch == event.pitch) {
           matched = true;
-          matchStatus[event.noteId] = "matched";
-          matchStatus[c.noteId!] = "matched";
+          noteStatus[event.noteId] = NoteStatus(match: MatchStatus.matched);
+          noteStatus[c.noteId!] = NoteStatus(match: MatchStatus.matched);
         } else {
           newPlayNotes.add(c);
         }
@@ -146,11 +162,11 @@ class MatcherBloc extends Bloc<MatcherEvent, MatcherState> {
           matched: matched ? state.matched + 1 : state.matched,
           scoreNotes: newScoreNotes,
           playNotes: newPlayNotes,
-          matchStatus: matchStatus));
+          noteStatus: noteStatus));
     });
     on<MatcherAddDivisionEvent>((event, emit) {
       List<MatchCandidate> newScoreNotes = [];
-      Map<NoteId, String> matchStatus = Map.from(state.matchStatus);
+      Map<NoteId, NoteStatus> noteStatus = Map.from(state.noteStatus);
 
       int unmatchedScore = 0;
       for (var c in state.scoreNotes) {
@@ -158,7 +174,7 @@ class MatcherBloc extends Bloc<MatcherEvent, MatcherState> {
           newScoreNotes.add(c.copyWith(ageInDivision: c.ageInDivision + 1));
         else {
           unmatchedScore++;
-          matchStatus[c.noteId!] = "unmatched";
+          noteStatus[c.noteId!] = NoteStatus(match: MatchStatus.unmatched);
         }
       }
       List<MatchCandidate> newPlayNotes = [];
@@ -169,7 +185,7 @@ class MatcherBloc extends Bloc<MatcherEvent, MatcherState> {
           newPlayNotes.add(c.copyWith(ageInDivision: c.ageInDivision + 1));
         else {
           unmatchedPlay++;
-          matchStatus[c.noteId!] = "unmatched";
+          noteStatus[c.noteId!] = NoteStatus(match: MatchStatus.unmatched);
         }
       }
       emit(state.copyWith(
@@ -177,7 +193,7 @@ class MatcherBloc extends Bloc<MatcherEvent, MatcherState> {
           playNotes: newPlayNotes,
           unmatchedPlayNotes: state.unmatchedPlayNotes + unmatchedPlay,
           unmatchedScoreNotes: state.unmatchedScoreNotes + unmatchedScore,
-          matchStatus: matchStatus));
+          noteStatus: noteStatus));
     });
     on<MatcherSetPlayingEvent>((event, emit) {
       emit(state.copyWith(playing: event.playing));

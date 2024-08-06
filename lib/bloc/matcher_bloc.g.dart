@@ -7,11 +7,13 @@ part of 'matcher_bloc.dart';
 // **************************************************************************
 
 abstract class _$MatcherStateCWProxy {
+  MatcherState currentPlayNote(NoteId? currentPlayNote);
+
   MatcherState inaccuratePlayNotes(int inaccuratePlayNotes);
 
-  MatcherState matchStatus(Map<NoteId, String> matchStatus);
-
   MatcherState matched(int matched);
+
+  MatcherState noteStatus(Map<NoteId, NoteStatus> noteStatus);
 
   MatcherState playNotes(List<MatchCandidate> playNotes);
 
@@ -30,9 +32,10 @@ abstract class _$MatcherStateCWProxy {
   /// MatcherState(...).copyWith(id: 12, name: "My name")
   /// ````
   MatcherState call({
+    NoteId? currentPlayNote,
     int? inaccuratePlayNotes,
-    Map<NoteId, String>? matchStatus,
     int? matched,
+    Map<NoteId, NoteStatus>? noteStatus,
     List<MatchCandidate>? playNotes,
     bool? playing,
     List<MatchCandidate>? scoreNotes,
@@ -48,15 +51,19 @@ class _$MatcherStateCWProxyImpl implements _$MatcherStateCWProxy {
   const _$MatcherStateCWProxyImpl(this._value);
 
   @override
+  MatcherState currentPlayNote(NoteId? currentPlayNote) =>
+      this(currentPlayNote: currentPlayNote);
+
+  @override
   MatcherState inaccuratePlayNotes(int inaccuratePlayNotes) =>
       this(inaccuratePlayNotes: inaccuratePlayNotes);
 
   @override
-  MatcherState matchStatus(Map<NoteId, String> matchStatus) =>
-      this(matchStatus: matchStatus);
+  MatcherState matched(int matched) => this(matched: matched);
 
   @override
-  MatcherState matched(int matched) => this(matched: matched);
+  MatcherState noteStatus(Map<NoteId, NoteStatus> noteStatus) =>
+      this(noteStatus: noteStatus);
 
   @override
   MatcherState playNotes(List<MatchCandidate> playNotes) =>
@@ -86,9 +93,10 @@ class _$MatcherStateCWProxyImpl implements _$MatcherStateCWProxy {
   /// MatcherState(...).copyWith(id: 12, name: "My name")
   /// ````
   MatcherState call({
+    Object? currentPlayNote = const $CopyWithPlaceholder(),
     Object? inaccuratePlayNotes = const $CopyWithPlaceholder(),
-    Object? matchStatus = const $CopyWithPlaceholder(),
     Object? matched = const $CopyWithPlaceholder(),
+    Object? noteStatus = const $CopyWithPlaceholder(),
     Object? playNotes = const $CopyWithPlaceholder(),
     Object? playing = const $CopyWithPlaceholder(),
     Object? scoreNotes = const $CopyWithPlaceholder(),
@@ -96,21 +104,25 @@ class _$MatcherStateCWProxyImpl implements _$MatcherStateCWProxy {
     Object? unmatchedScoreNotes = const $CopyWithPlaceholder(),
   }) {
     return MatcherState(
+      currentPlayNote: currentPlayNote == const $CopyWithPlaceholder()
+          ? _value.currentPlayNote
+          // ignore: cast_nullable_to_non_nullable
+          : currentPlayNote as NoteId?,
       inaccuratePlayNotes:
           inaccuratePlayNotes == const $CopyWithPlaceholder() ||
                   inaccuratePlayNotes == null
               ? _value.inaccuratePlayNotes
               // ignore: cast_nullable_to_non_nullable
               : inaccuratePlayNotes as int,
-      matchStatus:
-          matchStatus == const $CopyWithPlaceholder() || matchStatus == null
-              ? _value.matchStatus
-              // ignore: cast_nullable_to_non_nullable
-              : matchStatus as Map<NoteId, String>,
       matched: matched == const $CopyWithPlaceholder() || matched == null
           ? _value.matched
           // ignore: cast_nullable_to_non_nullable
           : matched as int,
+      noteStatus:
+          noteStatus == const $CopyWithPlaceholder() || noteStatus == null
+              ? _value.noteStatus
+              // ignore: cast_nullable_to_non_nullable
+              : noteStatus as Map<NoteId, NoteStatus>,
       playNotes: playNotes == const $CopyWithPlaceholder() || playNotes == null
           ? _value.playNotes
           // ignore: cast_nullable_to_non_nullable
@@ -143,4 +155,26 @@ extension $MatcherStateCopyWith on MatcherState {
   /// Returns a callable class that can be used as follows: `instanceOfMatcherState.copyWith(...)` or like so:`instanceOfMatcherState.copyWith.fieldName(...)`.
   // ignore: library_private_types_in_public_api
   _$MatcherStateCWProxy get copyWith => _$MatcherStateCWProxyImpl(this);
+
+  /// Copies the object with the specific fields set to `null`. If you pass `false` as a parameter, nothing will be done and it will be ignored. Don't do it. Prefer `copyWith(field: null)` or `MatcherState(...).copyWith.fieldName(...)` to override fields one at a time with nullification support.
+  ///
+  /// Usage
+  /// ```dart
+  /// MatcherState(...).copyWithNull(firstField: true, secondField: true)
+  /// ````
+  MatcherState copyWithNull({
+    bool currentPlayNote = false,
+  }) {
+    return MatcherState(
+      currentPlayNote: currentPlayNote == true ? null : this.currentPlayNote,
+      inaccuratePlayNotes: inaccuratePlayNotes,
+      matched: matched,
+      noteStatus: noteStatus,
+      playNotes: playNotes,
+      playing: playing,
+      scoreNotes: scoreNotes,
+      unmatchedPlayNotes: unmatchedPlayNotes,
+      unmatchedScoreNotes: unmatchedScoreNotes,
+    );
+  }
 }

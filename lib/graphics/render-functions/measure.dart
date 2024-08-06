@@ -483,7 +483,7 @@ paintMeasure(
                 index: index,
                 midiKey: -1,
                 fromPlay: false);
-            if (matcherState.matchStatus[noteId] == "matched")
+            if (matcherState.noteStatus[noteId]?.match == MatchStatus.matched)
               noteColor = Colors.green;
 
             paintPitchNote(drawC, mc, pn,
@@ -538,8 +538,9 @@ paintMeasure(
           midiKey: PitchNoteToMidiNote(element.note),
           fromPlay: true);
       // if its matched, we already paint it in score note
-      if (matcherState.matchStatus[noteId] == "matched") return;
-      if (matcherState.matchStatus[noteId] == "unmatched") color = Colors.red;
+      if (matcherState.noteStatus[noteId]?.match == MatchStatus.matched) return;
+      if (matcherState.noteStatus[noteId]?.match == MatchStatus.unmatched)
+        color = Colors.red;
 
       PitchNote? noteCopy;
       // decide which staff to draw it
