@@ -127,6 +127,11 @@ class MatcherBloc extends Bloc<MatcherEvent, MatcherState> {
       if (!matched) {
         newPlayNotes
             .add(MatchCandidate(pitch: event.pitch, noteId: event.noteId));
+        noteStatus[event.noteId] = NoteStatus(
+            match: MatchStatus.unmatched,
+            accuracy: event.inaccurate
+                ? NoteAccuracy.inaccurate
+                : NoteAccuracy.accurate);
       }
       emit(state.copyWith(
           currentPlayNote: event.noteId,
