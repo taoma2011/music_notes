@@ -4,6 +4,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:music_notes/graphics/render-functions/measure.dart';
 import 'package:music_notes/bloc/matcher_bloc.dart';
+import 'package:music_notes/bloc/current_play_cubit.dart';
 import 'generated/glyph-anchors.dart';
 import 'render-functions/common.dart';
 import 'render-functions/staff.dart';
