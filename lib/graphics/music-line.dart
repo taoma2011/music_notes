@@ -226,7 +226,7 @@ class _MusicLineState extends State<MusicLine> {
           Positioned(
             child: BlocBuilder<MatcherBloc, MatcherState>(
                 builder: (context, matcherState) =>
-                    BlocBuilder<Cubit<CurrentPlay>, CurrentPlay>(
+                    BlocBuilder<CurrentPlayCubit, CurrentPlay>(
                         builder: (context, currentPlay) {
                       // print("current measure is ${currentPlay.currentMeasure}");
                       return CustomPaint(
